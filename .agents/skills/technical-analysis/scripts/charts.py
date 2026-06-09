@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""
+technical-analysis 图表脚本 —— 用 matplotlib 出 PNG。
+子命令: trend / gex / flow。图内文字用英文(避免 matplotlib 缺中文字体出方块)。
+
+通用: python charts.py <cmd> --input data.json --out out.png --symbol NVDA
+
+输入 JSON 字段:
+  trend:
+    {"dates":["2026-01-02",...], "open":[...], "high":[...], "low":[...], "close":[...],
+     "volume":[...]}                 # 至少 60 根, 最好 >=200 才能算 MA200
+  gex:
+    {"spot": 123.4,
+     "chain":[{"strike":120,"call_oi":1500,"put_oi":800,"gamma":0.012}, ...]}
+     # gamma 为该行权价的(可用 call/put 共用近似, 或分别给 call_gamma/put_gamma)
+  flow:
+    {"price_bins":[100,102,...], "volume_at_price":[...],
+     "spot":123.4,
+     "supports":[{"price":118,"label":"MA50"}, ...],
+     "resistances":[{"price":130,"label":"Call Wall"}, ...],
+     "net_flow":{"d1":1.2e7,"d5":-3e6,"d20":5e7}}   # 可选, 单位美元
+"""
+import argparse, json, sys
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
+GREEN, RED, BLUE, GRAY, ORANGE = "#2ca02c", "#d62728", "#1f77b4", "#888888", "#ff7f0e"
+
+
+def _sma(a, n):
+    a = np.asarray(a, float)
+    if len(a) < n:
+        return np.full_like(a, np.nan)
+    out = np.full_like(a, np.nan)
+    c = np.cumsum(np.insert(a, 0, 0))
+    out[n - 1:] = (c[n:] - c[:-n]) / n
+    return out
+
+
+def _adx(high, low, close, n=14):
+    high, low, close = map(lambda x: np.asarray(x, float), (high, low, close))
+    up = high[1:] - high[:-1]
+    dn = low[:-1] - low[1:]
+    plus_dm = np.where((up > dn) & (up > 0), up, 0.0)
+    minus_dm = np.where((dn > up) & (dn > 0), dn, 0.0)
+    tr = np.maximum.reduce([high[1:] - low[1:],
+                            np.abs(high[1:] - close[:-1]),
+                            np.abs(low[1:] - close[:-1])])
+
+    def rma(x, n):
+        x = np.asarray(x, float)
+        out = np.full(len(x), np.nan)
+        # seed at first index with a full finite window (skip leading NaNs)
+        start = None
+        for i in range(len(x) - n + 1):
+            w = x[i:i + n]
+            if np.all(np.isfinite(w)):
+                start = i + n - 1
+                out[start] = np.mean(w)
+                break
+        if start is None:
+            return out
+        for i in range(start + 1, len(x)):
+            xi = x[i] if np.isfinite(x[i]) else out[i - 1]
+            out[i] = (out[i - 1] * (n - 1) + xi) / n
+        return out
+
+    atr = rma(tr, n)
+    pdi = 100 * rma(plus_dm, n) / atr
+    mdi = 100 * rma(minus_dm, n) / atr
+    dx = 100 * np.abs(pdi - mdi) / (pdi + mdi)
+    a = np.full(len(close), np.nan)   # ADX aligned to close (dx covers bars[1:])
+    a[1:] = rma(dx, n)
+    return a, np.concatenate([[np.nan], pdi]), np.concatenate([[np.nan], mdi])
+
+
+def _money(x, _):
+    ax = abs(x)
+    for div, suf in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if ax >= div:
+            return f"{x/div:.1f}{suf}"
+    return f"{x:.0f}"
+
+
+def cmd_trend(d, out, symbol):
+    close = np.asarray(d["close"], float)
+    x = np.arange(len(close))
+    ma20, ma50, ma200 = _sma(close, 20), _sma(close, 50), _sma(close, 200)
+    adx, pdi, mdi = _adx(d["high"], d["low"], close)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7), height_ratios=[3, 1], sharex=True)
+    ax1.plot(x, close, color="black", lw=1.4, label="Close")
+    ax1.plot(x, ma20, color=BLUE, lw=1, label="MA20")
+    ax1.plot(x, ma50, color=ORANGE, lw=1, label="MA50")
+    ax1.plot(x, ma200, color=RED, lw=1, label="MA200")
+    # regression channel
+    mask = ~np.isnan(close)
+    sl, ic = np.polyfit(x[mask], close[mask], 1)
+    fit = sl * x + ic
+    resid = close - fit
+    sd = np.nanstd(resid)
+    ax1.plot(x, fit, color=GRAY, ls="--", lw=0.9, label="Regression")
+    ax1.fill_between(x, fit - 2 * sd, fit + 2 * sd, color=GRAY, alpha=0.08)
+    trend = "UP" if sl > 0 else "DOWN"
+    ax1.set_title(f"{symbol}  Trend Evidence  (slope {trend}, MA stack + channel)", fontsize=12)
+    ax1.legend(loc="upper left", fontsize=8, ncol=5)
+    ax1.grid(alpha=0.25)
+
+    ax2.plot(x, adx, color="purple", lw=1.2, label="ADX")
+    ax2.plot(x, pdi, color=GREEN, lw=0.9, label="+DI")
+    ax2.plot(x, mdi, color=RED, lw=0.9, label="-DI")
+    ax2.axhline(25, color=GRAY, ls=":", lw=0.8)
+    ax2.text(0, 26, "25 (trend threshold)", fontsize=7, color=GRAY)
+    ax2.set_ylim(0, max(60, np.nanmax(adx) if np.isfinite(np.nanmax(adx)) else 60))
+    ax2.legend(loc="upper left", fontsize=8, ncol=3)
+    ax2.grid(alpha=0.25)
+    ax2.set_xlabel("bars")
+    fig.tight_layout()
+    fig.savefig(out, dpi=130)
+    print(f"saved {out}  | reg slope={sl:.4f} latest ADX={np.nanmax(adx):.1f}")
+
+
+def cmd_gex(d, out, symbol):
+    spot = float(d["spot"])
+    chain = d["chain"]
+    strikes = np.array([c["strike"] for c in chain], float)
+    order = np.argsort(strikes)
+    strikes = strikes[order]
+    rows = [chain[i] for i in order]
+    gex = []
+    for c in rows:
+        cg = c.get("call_gamma", c.get("gamma", 0.0))
+        pg = c.get("put_gamma", c.get("gamma", 0.0))
+        call = cg * c.get("call_oi", 0) * 100 * spot * spot * 0.01
+        put = pg * c.get("put_oi", 0) * 100 * spot * spot * 0.01
+        gex.append(call - put)            # dealer: +call, -put
+    gex = np.array(gex)
+    colors = [GREEN if g >= 0 else RED for g in gex]
+
+    call_wall = strikes[int(np.argmax(gex))]
+    put_wall = strikes[int(np.argmin(gex))]
+    # gamma flip: cumulative gex sign change (by strike, ascending)
+    cum = np.cumsum(gex)
+    flip = None
+    for i in range(1, len(cum)):
+        if cum[i - 1] < 0 <= cum[i] or cum[i - 1] > 0 >= cum[i]:
+            flip = strikes[i]
+            break
+    call_sum = gex[gex > 0].sum()
+    put_sum = -gex[gex < 0].sum()
+    pcr = put_sum / call_sum if call_sum else float("nan")
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    ax.bar(strikes, gex, width=(strikes[1] - strikes[0]) * 0.8 if len(strikes) > 1 else 1,
+           color=colors, edgecolor="none")
+    ax.axhline(0, color="black", lw=0.8)
+    ax.axvline(spot, color=BLUE, ls="-", lw=1.4, label=f"Spot {spot:g}")
+    ax.axvline(call_wall, color=GREEN, ls="--", lw=1.2, label=f"Call Wall {call_wall:g}")
+    ax.axvline(put_wall, color=RED, ls="--", lw=1.2, label=f"Put Wall {put_wall:g}")
+    if flip is not None:
+        ax.axvline(flip, color=ORANGE, ls=":", lw=1.4, label=f"Gamma Flip {flip:g}")
+    ax.yaxis.set_major_formatter(FuncFormatter(_money))
+    ax.set_xlabel("Strike")
+    ax.set_ylabel("Net GEX (dealer, $/1% move)")
+    ax.set_title(f"{symbol}  Gamma Exposure   GEX PCR = {pcr:.2f}", fontsize=12)
+    ax.legend(loc="upper right", fontsize=8)
+    ax.grid(alpha=0.25, axis="y")
+    fig.tight_layout()
+    fig.savefig(out, dpi=130)
+    print(f"saved {out}  | CallWall={call_wall:g} PutWall={put_wall:g} "
+          f"Flip={flip} PCR={pcr:.2f}")
+
+
+def cmd_flow(d, out, symbol):
+    bins = np.asarray(d["price_bins"], float)
+    vol = np.asarray(d["volume_at_price"], float)
+    spot = float(d.get("spot", bins[int(np.argmax(vol))]))
+    poc = bins[int(np.argmax(vol))]            # point of control (主力堆积区)
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    cols = [ORANGE if abs(b - poc) < 1e-9 else "#9ecae1" for b in bins]
+    ax.barh(bins, vol, height=(bins[1] - bins[0]) * 0.85 if len(bins) > 1 else 1,
+            color=cols, edgecolor="none")
+    ax.axhline(spot, color="black", lw=1.3, label=f"Spot {spot:g}")
+    ax.axhline(poc, color=ORANGE, lw=1.3, ls="--", label=f"POC {poc:g} (main cluster)")
+    for r in d.get("resistances", []):
+        ax.axhline(r["price"], color=RED, lw=1, ls=":",
+                   label=f"R {r['price']:g} {r.get('label','')}")
+    for s in d.get("supports", []):
+        ax.axhline(s["price"], color=GREEN, lw=1, ls=":",
+                   label=f"S {s['price']:g} {s.get('label','')}")
+    ax.xaxis.set_major_formatter(FuncFormatter(_money))
+    ax.set_xlabel("Volume at price")
+    ax.set_ylabel("Price")
+    nf = d.get("net_flow")
+    sub = ""
+    if nf:
+        sub = "   net flow  " + "  ".join(f"{k}:{_money(v,0)}" for k, v in nf.items())
+    ax.set_title(f"{symbol}  Volume Profile + S/R{sub}", fontsize=12)
+    ax.legend(loc="upper right", fontsize=7)
+    ax.grid(alpha=0.25, axis="x")
+    fig.tight_layout()
+    fig.savefig(out, dpi=130)
+    print(f"saved {out}  | POC={poc:g} spot={spot:g}")
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("cmd", choices=["trend", "gex", "flow"])
+    p.add_argument("--input", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--symbol", default="")
+    a = p.parse_args()
+    with open(a.input, encoding="utf-8") as f:
+        d = json.load(f)
+    {"trend": cmd_trend, "gex": cmd_gex, "flow": cmd_flow}[a.cmd](d, a.out, a.symbol)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
