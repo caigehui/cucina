@@ -93,7 +93,7 @@ output/stock-analysis/AAOI/AAOI_flow_real.png
 - `macro-events`: 宏观、地缘、财政、货币政策和事件日历分析。
 - `wsb-sentiment`: WSB 与 X/Twitter 散户情绪分析。
 
-当前根目录也已有若干 `AAOI_*.png` 图表,可作为技术分析图表输出的示例形态。
+技术分析图表的标准输出位置是 `output/stock-analysis/<SYMBOL>/`;不要把新生成的图表继续放在项目根目录。
 
 ## 输出目录
 

@@ -236,6 +236,7 @@ I notice this project doesn't have CodeGraph initialized. Want me to run `codegr
 - 如果修改技能,必须同步两套技能目录并说明同步范围。
 - 对代码或脚本修改要运行对应测试或最小 smoke check。
 - 对文档修改至少验证文件存在、内容能读、没有明显占位符或路径错误。
+- 每次完成任务后,默认自动提交并 push 到当前分支对应远端。提交前必须检查 `git status`,只暂存本任务相关文件;若没有远端、认证失败、存在冲突或用户明确要求不提交/不 push,则停止并说明原因。
 
 ## 风格
 
