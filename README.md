@@ -81,6 +81,12 @@ output/stock-analysis/AAOI/AAOI_flow_real.png
 
 每次涉及加仓、减仓、止损、止盈、对冲或仓位调整,都必须说明:这是研究分析和预案,不是持牌投顾建议;最终交易由用户自行判断和执行。
 
+### 5. MiroFish 情景仿真旁路
+
+本项目可以把公开材料、已验证研究摘要和脱敏组合暴露整理成 MiroFish seed 包,供独立运行的 MiroFish 做多智能体情景推演。MiroFish 的输出只作为模拟推断或推测,必须回到 Cucina 中与长桥、官方公告、SEC/IR、宏观数据、新闻、技术面和期权结构交叉验证。
+
+MiroFish 集成采用文件桥接方式,不把 MiroFish 源码复制进本仓库,不让 MiroFish 读取券商账户,也不把精确账户资产、成本、持仓数量、订单、流水或密钥默认写入 seed。标准工作流见 `docs/mirofish-integration.md`。
+
 ## 本项目已有模块
 
 本仓库已经内置一组本地技能,分别放在 `.agents/skills/` 和 `.claude/skills/` 下:
@@ -92,6 +98,7 @@ output/stock-analysis/AAOI/AAOI_flow_real.png
 - `tech-research`: 科技股与 AI 供应链卡点研究。
 - `macro-events`: 宏观、地缘、财政、货币政策和事件日历分析。
 - `wsb-sentiment`: WSB 与 X/Twitter 散户情绪分析。
+- `mirofish-simulation`: MiroFish seed 包生成、情景仿真导入和模拟推断整理。
 
 技术分析图表的标准输出位置是 `output/stock-analysis/<SYMBOL>/`;不要把新生成的图表继续放在项目根目录。
 
@@ -102,6 +109,7 @@ output/stock-analysis/AAOI/AAOI_flow_real.png
 - `output/reports/`: 每日美股研报。
 - `output/stock-analysis/<SYMBOL>/`: 个股分析正文、图表和中间数据。
 - `output/portfolio/`: 后续用于持仓体检快照和组合层面预案。
+- `output/simulations/`: MiroFish 情景仿真 seed、报告和摘要。
 - `output/tmp/`: 临时抓取、清洗或图表输入数据。
 
 `output/` 是本地生成目录,已加入 `.gitignore`,不要把里面的研报、图表、持仓快照或临时数据提交到版本库。
@@ -123,6 +131,7 @@ output/stock-analysis/AAOI/AAOI_flow_real.png
 看一下 AAOI 的技术面
 综合分析一下 NVDA,基本面和技术面都要
 现在我的仓位该怎么调,给我几个情景预案
+用 MiroFish 做一个 NVDA 财报情景推演
 ```
 
 ## 后续建设方向
@@ -131,3 +140,4 @@ output/stock-analysis/AAOI/AAOI_flow_real.png
 - 将技术分析图表输入数据和输出 PNG 标准化。
 - 把定时任务配置、长桥授权状态和只读工具白名单写入可审计的运行清单。
 - 为投资预案增加统一模板,方便比较不同日期的观点变化。
+- 在确认 MiroFish API 稳定后,再评估是否增加可选 HTTP 调用层;默认仍保持文件桥接和人工复核。
