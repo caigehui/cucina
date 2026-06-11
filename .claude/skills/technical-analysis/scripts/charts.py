@@ -68,8 +68,8 @@ def _ensure_font_instance(source, cached, weight=700):
 def _setup_style():
     noto_sans_bold = _ensure_font_instance(
         "C:/Windows/Fonts/NotoSansSC-VF.ttf",
-        FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
-        weight=800,
+        FONT_CACHE_DIR / "NotoSansSC-Black.ttf",
+        weight=900,
     )
     noto_serif_bold = _ensure_font_instance(
         "C:/Windows/Fonts/NotoSerifSC-VF.ttf",
@@ -78,6 +78,7 @@ def _setup_style():
     )
     font_candidates = [
         noto_sans_bold,
+        FONT_CACHE_DIR / "NotoSansSC-Black.ttf",
         FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
         FONT_CACHE_DIR / "NotoSansSC-Bold.ttf",
         "C:/Windows/Fonts/NotoSansSC-VF.ttf",
@@ -91,6 +92,7 @@ def _setup_style():
         FONT_CACHE_DIR / "NotoSerifSC-Bold.ttf",
         "C:/Windows/Fonts/NotoSerifSC-VF.ttf",
         noto_sans_bold,
+        FONT_CACHE_DIR / "NotoSansSC-Black.ttf",
         "C:/Windows/Fonts/NotoSansSC-VF.ttf",
         "C:/Windows/Fonts/msyhbd.ttc",
     ]
@@ -121,7 +123,7 @@ def _setup_style():
     plt.rcParams.update({
         "font.family": font_name,
         "font.sans-serif": [font_name, "Noto Sans SC", "Microsoft YaHei", "DejaVu Sans"],
-        "font.weight": "bold",
+        "font.weight": "black",
         "axes.unicode_minus": False,
         "figure.facecolor": BG,
         "axes.facecolor": AX_BG,
@@ -130,8 +132,8 @@ def _setup_style():
         "text.color": TEXT,
         "axes.labelcolor": TEXT,
         "axes.titlecolor": TEXT,
-        "axes.titleweight": "bold",
-        "axes.labelweight": "bold",
+        "axes.titleweight": "black",
+        "axes.labelweight": "black",
         "xtick.color": MUTED,
         "ytick.color": MUTED,
         "axes.edgecolor": GRID,
@@ -149,13 +151,13 @@ def _style_axes(*axes):
         ax.tick_params(colors=MUTED, labelsize=9)
         ax.xaxis.label.set_color(TEXT)
         ax.yaxis.label.set_color(TEXT)
-        ax.xaxis.label.set_fontweight("bold")
-        ax.yaxis.label.set_fontweight("bold")
+        ax.xaxis.label.set_fontweight("black")
+        ax.yaxis.label.set_fontweight("black")
         ax.title.set_color(TEXT)
-        ax.title.set_fontweight("bold")
+        ax.title.set_fontweight("black")
         ax.title.set_fontfamily(DISPLAY_FONT_NAME)
         for label in ax.get_xticklabels() + ax.get_yticklabels():
-            label.set_fontweight("bold")
+            label.set_fontweight("black")
             label.set_color(TEXT)
         for spine in ax.spines.values():
             spine.set_color(GRID)
@@ -168,7 +170,7 @@ def _style_axes(*axes):
             frame.set_alpha(0.92)
             for txt in legend.get_texts():
                 txt.set_color(TEXT)
-                txt.set_fontweight("bold")
+                txt.set_fontweight("black")
 
 
 def _save_dark(fig, out, dpi=160):
@@ -252,7 +254,7 @@ def cmd_trend(d, out, symbol):
     ax1.plot(x, fit, color=GRAY, ls="--", lw=0.9, label="Regression")
     ax1.fill_between(x, fit - 2 * sd, fit + 2 * sd, color=GRAY, alpha=0.16)
     trend = "UP" if sl > 0 else "DOWN"
-    ax1.set_title(f"{symbol}  Trend Evidence  (slope {trend}, MA stack + channel)", fontsize=15, fontweight="bold", fontfamily=DISPLAY_FONT_NAME)
+    ax1.set_title(f"{symbol}  Trend Evidence  (slope {trend}, MA stack + channel)", fontsize=15, fontweight="black", fontfamily=DISPLAY_FONT_NAME)
     ax1.legend(loc="upper left", fontsize=9, ncol=5)
     ax1.grid(alpha=0.42)
 
@@ -260,11 +262,11 @@ def cmd_trend(d, out, symbol):
     ax2.plot(x, pdi, color=GREEN, lw=0.9, label="+DI")
     ax2.plot(x, mdi, color=RED, lw=0.9, label="-DI")
     ax2.axhline(25, color=GRAY, ls=":", lw=0.8)
-    ax2.text(0, 26, "25 (trend threshold)", fontsize=8.5, color=TEXT, fontweight="bold")
+    ax2.text(0, 26, "25 (trend threshold)", fontsize=8.5, color=TEXT, fontweight="black")
     ax2.set_ylim(0, max(60, np.nanmax(adx) if np.isfinite(np.nanmax(adx)) else 60))
     ax2.legend(loc="upper left", fontsize=9, ncol=3)
     ax2.grid(alpha=0.42)
-    ax2.set_xlabel("bars", fontsize=11, fontweight="bold")
+    ax2.set_xlabel("bars", fontsize=11, fontweight="black")
     _style_axes(ax1, ax2)
     _save_dark(fig, out)
     print(f"saved {out}  | reg slope={sl:.4f} latest ADX={np.nanmax(adx):.1f}")
@@ -310,9 +312,9 @@ def cmd_gex(d, out, symbol):
     if flip is not None:
         ax.axvline(flip, color=ORANGE, ls=":", lw=1.4, label=f"Gamma Flip {flip:g}")
     ax.yaxis.set_major_formatter(FuncFormatter(_money))
-    ax.set_xlabel("Strike", fontsize=11, fontweight="bold")
-    ax.set_ylabel("Net GEX (dealer, $/1% move)", fontsize=11, fontweight="bold")
-    ax.set_title(f"{symbol}  Gamma Exposure   GEX PCR = {pcr:.2f}", fontsize=15, fontweight="bold", fontfamily=DISPLAY_FONT_NAME)
+    ax.set_xlabel("Strike", fontsize=11, fontweight="black")
+    ax.set_ylabel("Net GEX (dealer, $/1% move)", fontsize=11, fontweight="black")
+    ax.set_title(f"{symbol}  Gamma Exposure   GEX PCR = {pcr:.2f}", fontsize=15, fontweight="black", fontfamily=DISPLAY_FONT_NAME)
     ax.legend(loc="upper right", fontsize=9)
     ax.grid(alpha=0.42, axis="y")
     _style_axes(ax)
@@ -340,13 +342,13 @@ def cmd_flow(d, out, symbol):
         ax.axhline(s["price"], color=GREEN, lw=1, ls=":",
                    label=f"S {s['price']:g} {s.get('label','')}")
     ax.xaxis.set_major_formatter(FuncFormatter(_money))
-    ax.set_xlabel("Volume at price", fontsize=11, fontweight="bold")
-    ax.set_ylabel("Price", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Volume at price", fontsize=11, fontweight="black")
+    ax.set_ylabel("Price", fontsize=11, fontweight="black")
     nf = d.get("net_flow")
     sub = ""
     if nf:
         sub = "   net flow  " + "  ".join(f"{k}:{_money(v,0)}" for k, v in nf.items())
-    ax.set_title(f"{symbol}  Volume Profile + S/R{sub}", fontsize=15, fontweight="bold", fontfamily=DISPLAY_FONT_NAME)
+    ax.set_title(f"{symbol}  Volume Profile + S/R{sub}", fontsize=15, fontweight="black", fontfamily=DISPLAY_FONT_NAME)
     ax.legend(loc="upper right", fontsize=8.5)
     ax.grid(alpha=0.42, axis="x")
     _style_axes(ax)

@@ -61,7 +61,7 @@ description: 个股技术面分析模块——对单只美股给出「格局/动
 
 ## 三、出图与 PDF 导出(Python / matplotlib)
 
-图表脚本在同目录 `scripts/charts.py`。流程:**长桥取数 → 整理成脚本要的 JSON/CSV → 调脚本生成 PNG → 用 present_files 给用户(或嵌进研报)**。图表默认使用深色模式,字体优先 Google Noto Sans SC (`NotoSansSC-VF.ttf`),标题优先 Noto Serif SC 形成层级,再降级到 Microsoft YaHei / SimHei。图内所有文字必须纯白、加粗、字号不小于 9pt,标题不小于 15pt。
+图表脚本在同目录 `scripts/charts.py`。流程:**长桥取数 → 整理成脚本要的 JSON/CSV → 调脚本生成 PNG → 用 present_files 给用户(或嵌进研报)**。图表默认使用深色模式,普通文本优先 Google Noto Sans SC (`NotoSansSC-VF.ttf`) 的 regular-text/body 字体族并实例化到 900 字重,标题优先 Noto Serif SC 形成层级,再降级到 Microsoft YaHei / SimHei。图内所有文字必须纯白、加粗、字号不小于 9pt,标题不小于 15pt。
 
 ```bash
 # 趋势证据图:需要 OHLC + 日期序列
@@ -74,7 +74,7 @@ python scripts/charts.py flow    --input <flow.json>   --out <symbol>_flow.png  
 
 脚本无第三方依赖即可跑(只需 `matplotlib`、`numpy`;缺则 `pip install matplotlib numpy --break-system-packages`)。各子命令的输入 JSON 字段见脚本顶部 docstring。GEX 计算逻辑内置在脚本里,与上面 ⑤ 一致——传原始期权链即可。输出 PNG 应与 PDF 保持同一套 dark-mode / neon-green 科技风,不要再生成白底图表,不要使用灰色小字。
 
-PDF 导出脚本在同目录 `scripts/export_report.py`。它读取 Markdown 报告,解析本地图片链接,按页面宽度嵌入 PNG,并可在报告末尾自动补标准术语解释。默认模板为 `aurora-dark`:深色背景、青绿色高亮、数据 HUD 分区、科技感页眉页脚;正文优先 Google Noto Sans SC,标题优先 Noto Serif SC/display 字体。PDF 内所有文字必须纯白、加粗,正文不小于 10pt,二级标题不小于 15pt;标题和正文用字号与字体族区分,不是只换颜色。风格参考 Aura AI Sales Engine 的 dark-mode SaaS / telemetry aesthetic,但不复制其资产。
+PDF 导出脚本在同目录 `scripts/export_report.py`。它读取 Markdown 报告,解析本地图片链接,按页面宽度嵌入 PNG,并可在报告末尾自动补标准术语解释。默认模板为 `aurora-dark`:深色背景、青绿色高亮、数据 HUD 分区、科技感页眉页脚;正文优先 Google Noto Sans SC 的 regular-text/body 字体族并实例化到 900 字重,标题优先 Noto Serif SC/display 字体。PDF 内所有文字必须纯白、加粗,正文不小于 10pt,二级标题不小于 15pt;标题和正文用字号与字体族区分,不是只换颜色。风格参考 Aura AI Sales Engine 的 dark-mode SaaS / telemetry aesthetic,但不复制其资产。
 
 ```bash
 python scripts/export_report.py --input output/stock-analysis/NVDA/YYYY-MM-DD_NVDA_technical-analysis.md --out output/stock-analysis/NVDA/YYYY-MM-DD_NVDA_technical-analysis.pdf --append-glossary --update-md --engine auto

@@ -121,8 +121,8 @@ def ensure_variable_font_instance(source: Path, cached: Path, weight: int = 700)
 def ensure_noto_bold_font() -> Path | None:
     return ensure_variable_font_instance(
         Path("C:/Windows/Fonts/NotoSansSC-VF.ttf"),
-        FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
-        weight=800,
+        FONT_CACHE_DIR / "NotoSansSC-Black.ttf",
+        weight=900,
     )
 
 
@@ -137,6 +137,7 @@ def ensure_noto_display_bold_font() -> Path | None:
 def find_bold_font_path() -> Path | None:
     candidates = [
         ensure_noto_bold_font(),
+        FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
         FONT_CACHE_DIR / "NotoSansSC-Bold.ttf",
         Path("C:/Windows/Fonts/msyhbd.ttc"),
         Path("C:/Windows/Fonts/NotoSansSC-VF.ttf"),
@@ -151,6 +152,7 @@ def find_display_font_path() -> Path | None:
         FONT_CACHE_DIR / "NotoSerifSC-Bold.ttf",
         Path("C:/Windows/Fonts/NotoSerifSC-VF.ttf"),
         ensure_noto_bold_font(),
+        FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
         FONT_CACHE_DIR / "NotoSansSC-Bold.ttf",
         Path("C:/Windows/Fonts/NotoSansSC-VF.ttf"),
         Path("C:/Windows/Fonts/msyhbd.ttc"),
@@ -597,8 +599,8 @@ class MatplotlibRenderer:
             for y in [PAGE_H - 0.98 + n * 0.16 for n in range(5)]:
                 if (int(x * 100) + int(y * 100) + self.page_no) % 7 == 0:
                     self.ax.scatter([x], [y], s=2, color=ACCENT, alpha=0.22)
-        self.ax.text(MARGIN_L, PAGE_H - 0.42, "CUCINA MARKET INTELLIGENCE", fontsize=9.2, color=TEXT, fontproperties=self.display_font, weight="bold")
-        self.ax.text(PAGE_W - MARGIN_R, PAGE_H - 0.42, "TECHNICAL / SOCIAL / OPTIONS", fontsize=8.4, color=TEXT, fontproperties=self.font, ha="right", weight="bold")
+        self.ax.text(MARGIN_L, PAGE_H - 0.42, "CUCINA MARKET INTELLIGENCE", fontsize=9.2, color=TEXT, fontproperties=self.display_font, weight="black")
+        self.ax.text(PAGE_W - MARGIN_R, PAGE_H - 0.42, "TECHNICAL / SOCIAL / OPTIONS", fontsize=8.4, color=TEXT, fontproperties=self.font, ha="right", weight="black")
         self.y = PAGE_H - MARGIN_T - 0.28
 
     def _save_page(self) -> None:
@@ -613,7 +615,7 @@ class MatplotlibRenderer:
             fontsize=8.0,
             color=TEXT,
             fontproperties=self.font,
-            fontweight="bold",
+            fontweight="black",
         )
         self.pdf.savefig(self.fig, facecolor=BG)
         self.pages += 1
@@ -635,7 +637,7 @@ class MatplotlibRenderer:
         text: str,
         size: float = 10.2,
         color: str = TEXT,
-        weight: str = "bold",
+        weight: str = "black",
         indent: float = 0.0,
         display: bool = False,
     ) -> None:
@@ -659,7 +661,7 @@ class MatplotlibRenderer:
                 fontsize=size,
                 color=color,
                 fontproperties=self.display_font if display else self.font,
-                fontweight="bold",
+                fontweight="black",
                 clip_on=True,
             )
             self.y -= line_h
@@ -668,7 +670,7 @@ class MatplotlibRenderer:
     def add_heading(self, level: int, text: str) -> None:
         if level == 1:
             self.add_gap(0.04)
-            self.add_text(natural_heading(text), size=20.5, color=TEXT, weight="bold", display=True)
+            self.add_text(natural_heading(text), size=20.5, color=TEXT, weight="black", display=True)
             self.add_gap(0.04)
         elif level == 2:
             text = natural_heading(text)
@@ -676,11 +678,11 @@ class MatplotlibRenderer:
             self._need_space(0.34)
             assert self.ax is not None
             self.ax.add_patch(self.plt.Rectangle((MARGIN_L - 0.05, self.y - 0.31), CONTENT_W + 0.10, 0.39, color=PANEL, ec=STROKE, lw=0.5))
-            self.ax.text(MARGIN_L + 0.08, self.y - 0.01, text, ha="left", va="top", fontsize=14.4, color=TEXT, fontproperties=self.display_font, fontweight="bold", clip_on=True)
+            self.ax.text(MARGIN_L + 0.08, self.y - 0.01, text, ha="left", va="top", fontsize=14.4, color=TEXT, fontproperties=self.display_font, fontweight="black", clip_on=True)
             self.y -= 0.52
         else:
             self.add_gap(0.04)
-            self.add_text(natural_heading(text), size=12.2, color=TEXT, weight="bold", display=True)
+            self.add_text(natural_heading(text), size=12.2, color=TEXT, weight="black", display=True)
 
     def add_image(self, path: Path, alt: str) -> None:
         if not path.exists():
