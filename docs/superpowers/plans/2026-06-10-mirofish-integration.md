@@ -159,8 +159,8 @@ Expected: exit 0 and show `seed` plus `import-report` subcommands.
 Document the recommended commands:
 
 ```powershell
-rtk powershell -NoProfile -Command "python scripts/mirofish_bridge.py seed --topic 'NVDA earnings simulation' --question '若毛利率下修,AI 供应链叙事如何变化?' --symbol NVDA --input output/tmp/nvda_seed.md"
-rtk powershell -NoProfile -Command "python scripts/mirofish_bridge.py import-report --run-dir output/simulations/2026-06-10_nvda-earnings-simulation --report C:\path\to\mirofish_report.md"
+python scripts/mirofish_bridge.py seed --topic 'NVDA earnings simulation' --question '若毛利率下修,AI 供应链叙事如何变化?' --symbol NVDA --input output/tmp/nvda_seed.md
+python scripts/mirofish_bridge.py import-report --run-dir output/simulations/2026-06-10_nvda-earnings-simulation --report C:\path\to\mirofish_report.md
 ```
 
 - [ ] **Step 2: Add local skill**

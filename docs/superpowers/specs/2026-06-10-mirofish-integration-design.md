@@ -109,8 +109,8 @@ raw_response.json
 最小验证命令:
 
 ```powershell
-rtk powershell -NoProfile -Command "python -m unittest tests.test_mirofish_bridge -v"
-rtk powershell -NoProfile -Command "python scripts/mirofish_bridge.py --help"
+python -m unittest tests.test_mirofish_bridge -v
+python scripts/mirofish_bridge.py --help
 ```
 
 验收标准:

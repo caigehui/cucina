@@ -22,14 +22,14 @@ description: 用 MiroFish 做美股研究情景仿真、事件推演、多智能
 3. 用本项目脚本生成 seed 包:
 
 ```powershell
-rtk powershell -NoProfile -Command "python scripts/mirofish_bridge.py seed --topic '<topic>' --question '<question>' --symbol <SYMBOL> --input <sanitized-input.md> --horizon '<window>'"
+python scripts/mirofish_bridge.py seed --topic '<topic>' --question '<question>' --symbol <SYMBOL> --input <sanitized-input.md> --horizon '<window>'
 ```
 
 4. 让用户在独立 MiroFish 服务中运行模拟。不要把 MiroFish 源码复制进 Cucina。
 5. 用户提供或导出报告后,导入到同一个仿真目录:
 
 ```powershell
-rtk powershell -NoProfile -Command "python scripts/mirofish_bridge.py import-report --run-dir <output/simulations/...> --report <mirofish-report.md>"
+python scripts/mirofish_bridge.py import-report --run-dir <output/simulations/...> --report <mirofish-report.md>
 ```
 
 6. 从 `summary_for_cucina.md` 继续整理摘要,必须分清事实、模拟推断、推测、触发条件和证伪条件。

@@ -87,11 +87,14 @@ statement_export
 | “宏观”“利率”“CPI/PCE/NFP/FOMC”“这周大事件” | `macro-events` |
 | “WSB”“散户情绪”“X/Twitter 热度”“meme 股” | `wsb-sentiment` |
 | “MiroFish”“情景推演”“仿真”“沙盘”“多智能体预测” | `mirofish-simulation` |
+| 研报、个股分析、持仓预案写完后去 AI 味/润色中文表达 | `stop-ai-slop-zh` |
 | 范围笼统的美股问题 | `us-equity-research` 主控编排 |
 
 个股综合分析必须双轨:基本面/供应链用 `tech-research`,盘面/技术/期权结构用 `technical-analysis`,最后交叉印证。
 
 持仓建议必须把 `portfolio-advisor` 的持仓体检与宏观、个股研究、技术面信号连接起来,不能只给一句“买/卖/持有”。
+
+每日研报和个股技术分析正文落盘前,必须用 `stop-ai-slop-zh` 做一次中文表达体检:删套话、拆排比、去名词化、减少抽象主语。润色只改表达,不得删来源、as-of 时间、关键数字、图表引用、风险声明和事实/传闻/推断/推测分层。
 
 ## 长桥 Longbridge 使用规则
 
@@ -222,14 +225,16 @@ MiroFish 集成必须遵守:
 
 ## 命令规则
 
-本项目遵循 `C:\Users\Administrator\.codex\RTK.md`:
+本项目 shell 命令直接执行,不要添加项目专用包装前缀。
 
-- shell 命令必须通过 `rtk` 前缀执行。
-- PowerShell cmdlet 需要包进 PowerShell 进程,例如:
+- shell 命令直接执行。
+- PowerShell cmdlet 可直接执行;需要显式新进程时,使用 `powershell -NoProfile -Command`。
+- 示例:
 
 ```powershell
-rtk powershell -NoProfile -Command "Get-ChildItem -Force"
-rtk powershell -NoProfile -Command "Get-Content -Path 'README.md' -TotalCount 80"
+Get-ChildItem -Force
+Get-Content -Path 'README.md' -TotalCount 80
+powershell -NoProfile -Command "Get-ChildItem -Force"
 ```
 
 不要假设本目录是 Git 仓库。开始修改前先检查当前目录、文件状态和已有说明文件。

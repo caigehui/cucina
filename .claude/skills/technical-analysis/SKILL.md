@@ -91,3 +91,5 @@ python scripts/charts.py flow    --input <flow.json>   --out <symbol>_flow.png  
 
 ## 六、中文表达规范
 术语保留:RSI/MACD/ADX/OI/gamma/GEX/Call Wall/Put Wall 等;首次出现给一句中文(如 Gamma Flip=零伽马翻转位、OI=未平仓量、Volume Profile=成交量分布)。加粗克制,只标真结论/关键位/关键数值。
+
+报告正文落盘前必须按 `stop-ai-slop-zh` 做一次中文表达体检:删套话、拆排比三件套、去名词化,避免"首先/其次/综上"式八股段落。只改表达,不得删指标数值、图表引用、as-of 时间、数据缺口、术语解释或风险声明。
