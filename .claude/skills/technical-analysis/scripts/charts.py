@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-technical-analysis 图表脚本 —— 用 matplotlib 出 PNG。
-子命令: trend / gex / flow。图内文字用英文(避免 matplotlib 缺中文字体出方块)。
+technical-analysis 图表脚本 —— 用 matplotlib 出深色 PNG。
+子命令: trend / gex / flow。字体优先使用 Google Noto Sans SC。
 
 通用: python charts.py <cmd> --input data.json --out out.png --symbol NVDA
 
@@ -21,13 +21,160 @@ technical-analysis 图表脚本 —— 用 matplotlib 出 PNG。
      "net_flow":{"d1":1.2e7,"d5":-3e6,"d20":5e7}}   # 可选, 单位美元
 """
 import argparse, json, sys
+from pathlib import Path
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from matplotlib.ticker import FuncFormatter
 
-GREEN, RED, BLUE, GRAY, ORANGE = "#2ca02c", "#d62728", "#1f77b4", "#888888", "#ff7f0e"
+BG = "#030807"
+AX_BG = "#07110f"
+PANEL = "#0b1815"
+GRID = "#1f4f43"
+TEXT = "#FFFFFF"
+MUTED = "#FFFFFF"
+GREEN = "#62f0bd"
+RED = "#ff6b6b"
+BLUE = "#8aa7ff"
+GRAY = "#6b807a"
+ORANGE = "#f5c56a"
+PURPLE = "#c084fc"
+BAR_BLUE = "#3db7d6"
+FONT_CACHE_DIR = Path.home() / ".cache" / "cucina" / "fonts"
+
+
+def _ensure_font_instance(source, cached, weight=700):
+    source = Path(source)
+    cached = Path(cached)
+    if cached.exists():
+        return cached
+    if not source.exists():
+        return None
+    try:
+        from fontTools.ttLib import TTFont
+        from fontTools.varLib import instancer
+
+        FONT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        font = TTFont(str(source))
+        instancer.instantiateVariableFont(font, {"wght": weight}, inplace=True)
+        font.save(str(cached))
+        return cached
+    except Exception:
+        return None
+
+
+def _setup_style():
+    noto_sans_bold = _ensure_font_instance(
+        "C:/Windows/Fonts/NotoSansSC-VF.ttf",
+        FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
+        weight=800,
+    )
+    noto_serif_bold = _ensure_font_instance(
+        "C:/Windows/Fonts/NotoSerifSC-VF.ttf",
+        FONT_CACHE_DIR / "NotoSerifSC-ExtraBold.ttf",
+        weight=800,
+    )
+    font_candidates = [
+        noto_sans_bold,
+        FONT_CACHE_DIR / "NotoSansSC-ExtraBold.ttf",
+        FONT_CACHE_DIR / "NotoSansSC-Bold.ttf",
+        "C:/Windows/Fonts/NotoSansSC-VF.ttf",
+        "C:/Windows/Fonts/NotoSansCJKsc-Regular.otf",
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+    ]
+    display_candidates = [
+        noto_serif_bold,
+        FONT_CACHE_DIR / "NotoSerifSC-ExtraBold.ttf",
+        FONT_CACHE_DIR / "NotoSerifSC-Bold.ttf",
+        "C:/Windows/Fonts/NotoSerifSC-VF.ttf",
+        noto_sans_bold,
+        "C:/Windows/Fonts/NotoSansSC-VF.ttf",
+        "C:/Windows/Fonts/msyhbd.ttc",
+    ]
+    font_name = "Noto Sans SC"
+    display_name = font_name
+    for raw in font_candidates:
+        if not raw:
+            continue
+        path = Path(raw)
+        if path.exists():
+            try:
+                font_manager.fontManager.addfont(str(path))
+                font_name = font_manager.FontProperties(fname=str(path)).get_name()
+                break
+            except Exception:
+                continue
+    for raw in display_candidates:
+        if not raw:
+            continue
+        path = Path(raw)
+        if path.exists():
+            try:
+                font_manager.fontManager.addfont(str(path))
+                display_name = font_manager.FontProperties(fname=str(path)).get_name()
+                break
+            except Exception:
+                continue
+    plt.rcParams.update({
+        "font.family": font_name,
+        "font.sans-serif": [font_name, "Noto Sans SC", "Microsoft YaHei", "DejaVu Sans"],
+        "font.weight": "bold",
+        "axes.unicode_minus": False,
+        "figure.facecolor": BG,
+        "axes.facecolor": AX_BG,
+        "savefig.facecolor": BG,
+        "savefig.edgecolor": BG,
+        "text.color": TEXT,
+        "axes.labelcolor": TEXT,
+        "axes.titlecolor": TEXT,
+        "axes.titleweight": "bold",
+        "axes.labelweight": "bold",
+        "xtick.color": MUTED,
+        "ytick.color": MUTED,
+        "axes.edgecolor": GRID,
+        "grid.color": GRID,
+    })
+    return font_name, display_name
+
+
+FONT_NAME, DISPLAY_FONT_NAME = _setup_style()
+
+
+def _style_axes(*axes):
+    for ax in axes:
+        ax.set_facecolor(AX_BG)
+        ax.tick_params(colors=MUTED, labelsize=9)
+        ax.xaxis.label.set_color(TEXT)
+        ax.yaxis.label.set_color(TEXT)
+        ax.xaxis.label.set_fontweight("bold")
+        ax.yaxis.label.set_fontweight("bold")
+        ax.title.set_color(TEXT)
+        ax.title.set_fontweight("bold")
+        ax.title.set_fontfamily(DISPLAY_FONT_NAME)
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight("bold")
+            label.set_color(TEXT)
+        for spine in ax.spines.values():
+            spine.set_color(GRID)
+            spine.set_linewidth(0.8)
+        legend = ax.get_legend()
+        if legend:
+            frame = legend.get_frame()
+            frame.set_facecolor(PANEL)
+            frame.set_edgecolor(GRID)
+            frame.set_alpha(0.92)
+            for txt in legend.get_texts():
+                txt.set_color(TEXT)
+                txt.set_fontweight("bold")
+
+
+def _save_dark(fig, out, dpi=160):
+    fig.patch.set_facecolor(BG)
+    fig.tight_layout(pad=1.1)
+    fig.savefig(out, dpi=dpi, facecolor=BG, edgecolor=BG, bbox_inches="tight")
 
 
 def _sma(a, n):
@@ -92,7 +239,7 @@ def cmd_trend(d, out, symbol):
     adx, pdi, mdi = _adx(d["high"], d["low"], close)
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7), height_ratios=[3, 1], sharex=True)
-    ax1.plot(x, close, color="black", lw=1.4, label="Close")
+    ax1.plot(x, close, color=TEXT, lw=1.5, label="Close")
     ax1.plot(x, ma20, color=BLUE, lw=1, label="MA20")
     ax1.plot(x, ma50, color=ORANGE, lw=1, label="MA50")
     ax1.plot(x, ma200, color=RED, lw=1, label="MA200")
@@ -103,23 +250,23 @@ def cmd_trend(d, out, symbol):
     resid = close - fit
     sd = np.nanstd(resid)
     ax1.plot(x, fit, color=GRAY, ls="--", lw=0.9, label="Regression")
-    ax1.fill_between(x, fit - 2 * sd, fit + 2 * sd, color=GRAY, alpha=0.08)
+    ax1.fill_between(x, fit - 2 * sd, fit + 2 * sd, color=GRAY, alpha=0.16)
     trend = "UP" if sl > 0 else "DOWN"
-    ax1.set_title(f"{symbol}  Trend Evidence  (slope {trend}, MA stack + channel)", fontsize=12)
-    ax1.legend(loc="upper left", fontsize=8, ncol=5)
-    ax1.grid(alpha=0.25)
+    ax1.set_title(f"{symbol}  Trend Evidence  (slope {trend}, MA stack + channel)", fontsize=15, fontweight="bold", fontfamily=DISPLAY_FONT_NAME)
+    ax1.legend(loc="upper left", fontsize=9, ncol=5)
+    ax1.grid(alpha=0.42)
 
-    ax2.plot(x, adx, color="purple", lw=1.2, label="ADX")
+    ax2.plot(x, adx, color=PURPLE, lw=1.2, label="ADX")
     ax2.plot(x, pdi, color=GREEN, lw=0.9, label="+DI")
     ax2.plot(x, mdi, color=RED, lw=0.9, label="-DI")
     ax2.axhline(25, color=GRAY, ls=":", lw=0.8)
-    ax2.text(0, 26, "25 (trend threshold)", fontsize=7, color=GRAY)
+    ax2.text(0, 26, "25 (trend threshold)", fontsize=8.5, color=TEXT, fontweight="bold")
     ax2.set_ylim(0, max(60, np.nanmax(adx) if np.isfinite(np.nanmax(adx)) else 60))
-    ax2.legend(loc="upper left", fontsize=8, ncol=3)
-    ax2.grid(alpha=0.25)
-    ax2.set_xlabel("bars")
-    fig.tight_layout()
-    fig.savefig(out, dpi=130)
+    ax2.legend(loc="upper left", fontsize=9, ncol=3)
+    ax2.grid(alpha=0.42)
+    ax2.set_xlabel("bars", fontsize=11, fontweight="bold")
+    _style_axes(ax1, ax2)
+    _save_dark(fig, out)
     print(f"saved {out}  | reg slope={sl:.4f} latest ADX={np.nanmax(adx):.1f}")
 
 
@@ -156,20 +303,20 @@ def cmd_gex(d, out, symbol):
     fig, ax = plt.subplots(figsize=(11, 6))
     ax.bar(strikes, gex, width=(strikes[1] - strikes[0]) * 0.8 if len(strikes) > 1 else 1,
            color=colors, edgecolor="none")
-    ax.axhline(0, color="black", lw=0.8)
+    ax.axhline(0, color=MUTED, lw=0.8)
     ax.axvline(spot, color=BLUE, ls="-", lw=1.4, label=f"Spot {spot:g}")
     ax.axvline(call_wall, color=GREEN, ls="--", lw=1.2, label=f"Call Wall {call_wall:g}")
     ax.axvline(put_wall, color=RED, ls="--", lw=1.2, label=f"Put Wall {put_wall:g}")
     if flip is not None:
         ax.axvline(flip, color=ORANGE, ls=":", lw=1.4, label=f"Gamma Flip {flip:g}")
     ax.yaxis.set_major_formatter(FuncFormatter(_money))
-    ax.set_xlabel("Strike")
-    ax.set_ylabel("Net GEX (dealer, $/1% move)")
-    ax.set_title(f"{symbol}  Gamma Exposure   GEX PCR = {pcr:.2f}", fontsize=12)
-    ax.legend(loc="upper right", fontsize=8)
-    ax.grid(alpha=0.25, axis="y")
-    fig.tight_layout()
-    fig.savefig(out, dpi=130)
+    ax.set_xlabel("Strike", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Net GEX (dealer, $/1% move)", fontsize=11, fontweight="bold")
+    ax.set_title(f"{symbol}  Gamma Exposure   GEX PCR = {pcr:.2f}", fontsize=15, fontweight="bold", fontfamily=DISPLAY_FONT_NAME)
+    ax.legend(loc="upper right", fontsize=9)
+    ax.grid(alpha=0.42, axis="y")
+    _style_axes(ax)
+    _save_dark(fig, out)
     print(f"saved {out}  | CallWall={call_wall:g} PutWall={put_wall:g} "
           f"Flip={flip} PCR={pcr:.2f}")
 
@@ -181,10 +328,10 @@ def cmd_flow(d, out, symbol):
     poc = bins[int(np.argmax(vol))]            # point of control (主力堆积区)
 
     fig, ax = plt.subplots(figsize=(10, 7))
-    cols = [ORANGE if abs(b - poc) < 1e-9 else "#9ecae1" for b in bins]
+    cols = [ORANGE if abs(b - poc) < 1e-9 else BAR_BLUE for b in bins]
     ax.barh(bins, vol, height=(bins[1] - bins[0]) * 0.85 if len(bins) > 1 else 1,
-            color=cols, edgecolor="none")
-    ax.axhline(spot, color="black", lw=1.3, label=f"Spot {spot:g}")
+            color=cols, edgecolor="none", alpha=0.82)
+    ax.axhline(spot, color=TEXT, lw=1.3, label=f"Spot {spot:g}")
     ax.axhline(poc, color=ORANGE, lw=1.3, ls="--", label=f"POC {poc:g} (main cluster)")
     for r in d.get("resistances", []):
         ax.axhline(r["price"], color=RED, lw=1, ls=":",
@@ -193,17 +340,17 @@ def cmd_flow(d, out, symbol):
         ax.axhline(s["price"], color=GREEN, lw=1, ls=":",
                    label=f"S {s['price']:g} {s.get('label','')}")
     ax.xaxis.set_major_formatter(FuncFormatter(_money))
-    ax.set_xlabel("Volume at price")
-    ax.set_ylabel("Price")
+    ax.set_xlabel("Volume at price", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Price", fontsize=11, fontweight="bold")
     nf = d.get("net_flow")
     sub = ""
     if nf:
         sub = "   net flow  " + "  ".join(f"{k}:{_money(v,0)}" for k, v in nf.items())
-    ax.set_title(f"{symbol}  Volume Profile + S/R{sub}", fontsize=12)
-    ax.legend(loc="upper right", fontsize=7)
-    ax.grid(alpha=0.25, axis="x")
-    fig.tight_layout()
-    fig.savefig(out, dpi=130)
+    ax.set_title(f"{symbol}  Volume Profile + S/R{sub}", fontsize=15, fontweight="bold", fontfamily=DISPLAY_FONT_NAME)
+    ax.legend(loc="upper right", fontsize=8.5)
+    ax.grid(alpha=0.42, axis="x")
+    _style_axes(ax)
+    _save_dark(fig, out)
     print(f"saved {out}  | POC={poc:g} spot={spot:g}")
 
 
