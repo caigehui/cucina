@@ -318,6 +318,35 @@ def table_rows_to_readable_lines(rows: list[list[str]]) -> list[str]:
     return ["；".join(strip_inline_markdown(cell).strip() for cell in headers if cell.strip())]
 
 
+def table_column_widths(headers: list[str], total_width: float) -> list[float]:
+    if len(headers) <= 5:
+        return [total_width / len(headers)] * len(headers)
+
+    weights = []
+    for header in headers:
+        clean = strip_inline_markdown(header)
+        if "排名" in clean:
+            weights.append(0.48)
+        elif "标的" in clean or "主题" in clean:
+            weights.append(0.95)
+        elif "证据" in clean or "关注" in clean:
+            weights.append(1.75)
+        elif "喊单" in clean:
+            weights.append(0.9)
+        elif "玩法" in clean:
+            weights.append(1.0)
+        elif "拥挤" in clean:
+            weights.append(0.72)
+        elif "HYPE" in clean.upper():
+            weights.append(0.72)
+        elif "风险" in clean or "反向" in clean:
+            weights.append(1.55)
+        else:
+            weights.append(1.0)
+    total = sum(weights) or 1.0
+    return [total_width * weight / total for weight in weights]
+
+
 def render_reportlab(md_path: Path, text: str, out: Path) -> tuple[int, int, str]:
     try:
         from reportlab.lib import colors
@@ -442,6 +471,21 @@ def render_reportlab(md_path: Path, text: str, out: Path) -> tuple[int, int, str
         spaceAfter=8,
         wordWrap="CJK",
     )
+    table_body = ParagraphStyle(
+        "CucinaTableBody",
+        parent=body,
+        fontName=bold_name,
+        fontSize=9.2,
+        leading=12.4,
+        spaceAfter=0,
+        wordWrap="CJK",
+    )
+    wide_table_body = ParagraphStyle(
+        "CucinaWideTableBody",
+        parent=table_body,
+        fontSize=7.2,
+        leading=9.5,
+    )
 
     story = []
     images = 0
@@ -508,28 +552,27 @@ def render_reportlab(md_path: Path, text: str, out: Path) -> tuple[int, int, str
                 i += 1
             if rows:
                 col_count = max(len(row) for row in rows)
-                if col_count > 5:
-                    for readable_line in table_rows_to_readable_lines(rows):
-                        story.append(Paragraph(inline_markdown_to_reportlab(readable_line), bullet))
-                    story.append(Spacer(1, 8))
-                    continue
-                col_w = [width / col_count] * col_count
+                headers = rows[0] + [""] * (col_count - len(rows[0]))
+                col_w = table_column_widths(headers, width)
+                cell_style = wide_table_body if col_count > 5 else table_body
+                font_size = 7.2 if col_count > 5 else 9.2
+                pad = 3 if col_count > 5 else 5
                 table_data = []
                 for row in rows:
                     padded = row + [""] * (col_count - len(row))
-                    table_data.append([Paragraph(inline_markdown_to_reportlab(cell), body) for cell in padded])
+                    table_data.append([Paragraph(inline_markdown_to_reportlab(cell), cell_style) for cell in padded])
                 table = Table(table_data, colWidths=col_w, hAlign="LEFT", repeatRows=1)
                 table.setStyle(TableStyle([
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f2a23")),
                     ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor(TEXT)),
                     ("FONTNAME", (0, 0), (-1, -1), bold_name),
-                    ("FONTSIZE", (0, 0), (-1, -1), 10.0),
+                    ("FONTSIZE", (0, 0), (-1, -1), font_size),
                     ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#244d43")),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("LEFTPADDING", (0, 0), (-1, -1), pad),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), pad),
+                    ("TOPPADDING", (0, 0), (-1, -1), pad),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), pad),
                 ]))
                 story.append(table)
                 story.append(Spacer(1, 8))

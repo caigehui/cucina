@@ -5,6 +5,8 @@ import unittest
 import importlib.util
 from pathlib import Path
 
+from pdfminer.high_level import extract_text
+
 
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS_EXPORTER = ROOT / ".agents" / "skills" / "daily-report" / "scripts" / "export_report.py"
@@ -127,6 +129,49 @@ class DailyReportExportTests(unittest.TestCase):
         self.assertNotIn("|---:|---|---|", rendered_lines)
         self.assertNotIn("| 排名 | 标的 | WSB 关注证据 |", rendered_lines)
         self.assertIn("排名: 1；标的: SPCX；WSB 关注证据: IPO 讨论升温", rendered_lines)
+
+    def test_reportlab_keeps_wsb_stock_radar_as_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            md = root / "report.md"
+            pdf = root / "report.pdf"
+            md.write_text(
+                "\n".join(
+                    [
+                        "# 美股每日研报｜2026-06-12",
+                        "",
+                        "## 社媒情绪",
+                        "### WSB 股票雷达",
+                        "| 排名 | 标的/主题 | WSB 关注证据 | 喊单方向 | 常见玩法 | 个股拥挤度 | HYPE 阶段 | 风险/反向信号 |",
+                        "|---:|---|---|---|---|---|---|---|",
+                        "| 1 | SPCX / SpaceX IPO | Daily discussion 多次出现 | 双向分歧偏 FOMO | IPO、tokenized exposure | 极端 | 末期 | X 叙事密集 |",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(AGENTS_EXPORTER),
+                    "--input",
+                    str(md),
+                    "--out",
+                    str(pdf),
+                    "--engine",
+                    "reportlab",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            rendered_text = extract_text(str(pdf))
+            self.assertIn("WSB 股票雷达", rendered_text)
+            self.assertIn("标的/主题", rendered_text)
+            self.assertNotIn("排名: 1；标的/主题: SPCX / SpaceX IPO", rendered_text)
 
 
 if __name__ == "__main__":
