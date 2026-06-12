@@ -118,24 +118,28 @@ statement_export
 
 ### 每日研报
 
-文件必须写入:
+文件必须写入同名 MD + PDF 两个版本:
 
 ```text
 output/reports/美股研报_YYYY-MM-DD.md
+output/reports/美股研报_YYYY-MM-DD.pdf
 ```
 
 ```text
 # 美股每日研报 | YYYY-MM-DD
 
-## 0. 一句话定调
-## 1. 隔夜复盘
-## 2. 宏观与盘前要闻
-## 3. 今日与未来事件日历
-## 4. 社媒情绪
-## 5. 科技股/AI 供应链看点
-## 6. 持仓提示
-## 7. 风险与证伪
+## 市场温度
+## 隔夜/收盘复盘
+## 宏观与盘前要闻
+## 事件日历
+## 社媒情绪
+## 科技股/AI 供应链看点
+## 持仓提示
+## 风险与证伪
+## 主要来源
 ```
+
+日报样式与个股分析保持同一套深色科技风:结论先行、自然标题、数据 HUD 感、PDF 页眉页脚清晰。Markdown 写好后用 `.agents/skills/daily-report/scripts/export_report.py` 导出同名 PDF,并验证 PDF 存在且大小大于 0。
 
 研报默认按用户本机美西时区 `America/Los_Angeles` 在美股常规交易日 04:30 与 15:00 两次推送,分别对应常规开盘美西 06:30 / 美东 09:30 前 2 小时和常规收盘美西 13:00 / 美东 16:00 后 2 小时。等价美东时间为 07:30 与 18:00。夏令时/冬令时由美西时区自动换算,不固定写死北京时间。若用户要求创建、查看、修改、删除定时任务,必须先搜索并使用 automation/update 类工具,不要手写自动化指令。
 
@@ -215,7 +219,7 @@ MiroFish 集成必须遵守:
 - `AGENTS.md`: 当前文件,约束代理工作方式。
 - `.agents/skills/`: Codex/Agents 本地技能。
 - `.claude/skills/`: Claude 本地技能镜像。
-- `output/reports/`: 每日研报输出目录。
+- `output/reports/`: 每日研报 Markdown、PDF 输出目录。
 - `output/stock-analysis/<SYMBOL>/`: 个股分析正文、图表和中间数据目录。
 - `output/portfolio/`: 持仓体检快照和组合预案输出目录。
 - `output/simulations/`: MiroFish seed 包、仿真报告和 Cucina 摘要目录。
