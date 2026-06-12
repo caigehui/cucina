@@ -11,9 +11,28 @@ from pdfminer.high_level import extract_text
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS_EXPORTER = ROOT / ".agents" / "skills" / "daily-report" / "scripts" / "export_report.py"
 CLAUDE_EXPORTER = ROOT / ".claude" / "skills" / "daily-report" / "scripts" / "export_report.py"
+AGENTS_DAILY_SKILL = ROOT / ".agents" / "skills" / "daily-report" / "SKILL.md"
+CLAUDE_DAILY_SKILL = ROOT / ".claude" / "skills" / "daily-report" / "SKILL.md"
 
 
 class DailyReportExportTests(unittest.TestCase):
+    def test_daily_report_skill_excludes_portfolio_section_and_broker_branding(self):
+        self.assertTrue(AGENTS_DAILY_SKILL.exists())
+        self.assertTrue(CLAUDE_DAILY_SKILL.exists())
+        agents_text = AGENTS_DAILY_SKILL.read_text(encoding="utf-8")
+        claude_text = CLAUDE_DAILY_SKILL.read_text(encoding="utf-8")
+        self.assertEqual(agents_text, claude_text)
+
+        disallowed_terms = [
+            "持仓提示",
+            "portfolio-advisor",
+            "LongBridge",
+            "Longbridge",
+            "长桥",
+        ]
+        for term in disallowed_terms:
+            self.assertNotIn(term, agents_text)
+
     def test_daily_report_exporter_writes_pdf_with_daily_profile(self):
         self.assertTrue(AGENTS_EXPORTER.exists())
         self.assertTrue(CLAUDE_EXPORTER.exists())
