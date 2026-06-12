@@ -2,6 +2,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import importlib.util
 from pathlib import Path
 
 
@@ -68,6 +69,64 @@ class DailyReportExportTests(unittest.TestCase):
             self.assertTrue(pdf.exists())
             self.assertGreater(pdf.stat().st_size, 0)
             self.assertIn("## 术语解释", md.read_text(encoding="utf-8"))
+
+    def test_matplotlib_exporter_does_not_render_markdown_table_syntax(self):
+        spec = importlib.util.spec_from_file_location("daily_exporter", AGENTS_EXPORTER)
+        self.assertIsNotNone(spec)
+        module = importlib.util.module_from_spec(spec)
+        assert spec and spec.loader
+        spec.loader.exec_module(module)
+
+        class FakeRenderer:
+            instances = []
+
+            def __init__(self, out):
+                self.out = out
+                self.text_calls = []
+                self.heading_calls = []
+                self.pages = 1
+                self.images = 0
+                FakeRenderer.instances.append(self)
+
+            def add_gap(self, inches):
+                pass
+
+            def add_text(self, text, **kwargs):
+                self.text_calls.append(text)
+
+            def add_heading(self, level, text):
+                self.heading_calls.append((level, text))
+
+            def add_image(self, path, alt):
+                self.images += 1
+
+            def close(self):
+                pass
+
+        old_renderer = module.MatplotlibRenderer
+        module.MatplotlibRenderer = FakeRenderer
+        try:
+            module.render_matplotlib(
+                Path("report.md"),
+                "\n".join(
+                    [
+                        "# 美股每日研报｜2026-06-12",
+                        "",
+                        "## 社媒情绪",
+                        "| 排名 | 标的 | WSB 关注证据 |",
+                        "|---:|---|---|",
+                        "| 1 | SPCX | IPO 讨论升温 |",
+                    ]
+                ),
+                Path("report.pdf"),
+            )
+        finally:
+            module.MatplotlibRenderer = old_renderer
+
+        rendered_lines = FakeRenderer.instances[0].text_calls
+        self.assertNotIn("|---:|---|---|", rendered_lines)
+        self.assertNotIn("| 排名 | 标的 | WSB 关注证据 |", rendered_lines)
+        self.assertIn("排名: 1；标的: SPCX；WSB 关注证据: IPO 讨论升温", rendered_lines)
 
 
 if __name__ == "__main__":

@@ -204,6 +204,13 @@ def wrap_visual(text: str, max_units: int) -> list[str]:
 def strip_unsupported_symbols(text: str) -> str:
     # Windows CJK fonts used for PDF export generally do not include emoji.
     # Dropping supplementary-plane symbols avoids tofu boxes in the final PDF.
+    replacements = {
+        "\ufe0f": "",
+        "⚠": "",
+        "⚫": "",
+    }
+    for source, target in replacements.items():
+        text = text.replace(source, target)
     return "".join(ch for ch in text if ord(ch) <= 0xFFFF)
 
 
@@ -287,6 +294,28 @@ def is_table_start(lines: list[str], index: int) -> bool:
 def split_table_row(line: str) -> list[str]:
     cells = line.strip().strip("|").split("|")
     return [cell.strip() for cell in cells]
+
+
+def table_rows_to_readable_lines(rows: list[list[str]]) -> list[str]:
+    if not rows:
+        return []
+    headers = rows[0]
+    readable: list[str] = []
+    for row in rows[1:]:
+        padded = row + [""] * (len(headers) - len(row))
+        pairs = []
+        for header, cell in zip(headers, padded):
+            header = strip_inline_markdown(header).strip()
+            cell = strip_inline_markdown(cell).strip()
+            if header and cell:
+                pairs.append(f"{header}: {cell}")
+            elif cell:
+                pairs.append(cell)
+        if pairs:
+            readable.append("；".join(pairs))
+    if readable:
+        return readable
+    return ["；".join(strip_inline_markdown(cell).strip() for cell in headers if cell.strip())]
 
 
 def render_reportlab(md_path: Path, text: str, out: Path) -> tuple[int, int, str]:
@@ -479,6 +508,11 @@ def render_reportlab(md_path: Path, text: str, out: Path) -> tuple[int, int, str
                 i += 1
             if rows:
                 col_count = max(len(row) for row in rows)
+                if col_count > 5:
+                    for readable_line in table_rows_to_readable_lines(rows):
+                        story.append(Paragraph(inline_markdown_to_reportlab(readable_line), bullet))
+                    story.append(Spacer(1, 8))
+                    continue
                 col_w = [width / col_count] * col_count
                 table_data = []
                 for row in rows:
@@ -702,26 +736,43 @@ class MatplotlibRenderer:
 def render_matplotlib(md_path: Path, text: str, out: Path) -> tuple[int, int, str]:
     renderer = MatplotlibRenderer(out)
     in_fence = False
-    for raw_line in text.splitlines():
-        line = raw_line.rstrip()
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
         stripped = line.strip()
         if stripped.startswith("```"):
             in_fence = not in_fence
+            i += 1
             continue
         if not stripped:
             renderer.add_gap(0.07)
+            i += 1
             continue
 
         image_match = IMAGE_RE.search(line)
         if image_match:
             alt, target = image_match.groups()
             renderer.add_image(resolve_image(md_path, target), alt)
+            i += 1
             continue
 
         heading_match = HEADING_RE.match(line)
         if heading_match and not in_fence:
             level = len(heading_match.group(1))
             renderer.add_heading(level, strip_inline_markdown(heading_match.group(2)))
+            i += 1
+            continue
+
+        if not in_fence and is_table_start(lines, i):
+            rows = [split_table_row(lines[i])]
+            i += 2
+            while i < len(lines) and "|" in lines[i].strip():
+                rows.append(split_table_row(lines[i]))
+                i += 1
+            for readable_line in table_rows_to_readable_lines(rows):
+                renderer.add_text(readable_line, size=9.4, indent=0.12)
+            renderer.add_gap(0.05)
             continue
 
         if stripped.startswith(("- ", "* ")):
@@ -730,6 +781,7 @@ def render_matplotlib(md_path: Path, text: str, out: Path) -> tuple[int, int, st
             renderer.add_text(stripped, size=10.0, indent=0.12)
         else:
             renderer.add_text(stripped, size=10.0 if in_fence else 10.4)
+        i += 1
 
     renderer.close()
     return renderer.pages, renderer.images, "matplotlib"
